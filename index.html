@@ -19,6 +19,7 @@
             width: 100%;
             background: #2c3e50;
             z-index: 1000;
+            text-align: center; /* Center align the menu */
         }
         #dropdown button {
             width: 100%;
@@ -28,7 +29,6 @@
             color: white;
             border: none;
             cursor: pointer;
-            text-align: left;
         }
         #dropdown button:hover {
             background: #1abc9c;
@@ -39,6 +39,7 @@
             padding: 10px;
             max-height: 80vh;
             overflow-y: auto;
+            text-align: center; /* Center align the dropdown content */
         }
         #dropdown-content.show {
             display: block;
@@ -61,7 +62,7 @@
             width: 100%;
             margin: 5px 0;
             padding: 12px;
-            text-align: left;
+            text-align: center; /* Center align chapter buttons */
             border: none;
             background: #34495e;
             color: white;
@@ -91,15 +92,8 @@
     <div id="dropdown">
         <button onclick="toggleDropdown()">☰ Chapters</button>
         <div id="dropdown-content">
-            <button class="chapter-btn" onclick="toggleSection('page-links')">Pages</button>
-            <div id="page-links" class="hidden">
-                <h2>Pages</h2>
-            </div>
-
-            <button class="chapter-btn" onclick="toggleSection('chapter-links')">Juzz</button>
-            <div id="chapter-links" class="hidden">
-                <h2>Juzz</h2>
-            </div>
+            <h2>Chapters</h2>
+            <div id="chapter-links"></div>
         </div>
     </div>
     <div id="viewer-container">
@@ -157,18 +151,12 @@
             dropdownContent.classList.toggle('show');
         }
 
-        // Toggle sections (Pages or Juzz)
-        function toggleSection(id) {
-            document.getElementById(id).classList.toggle("hidden");
-        }
-
         // PDF handling functions
         async function loadPDF() {
             try {
                 pdfDoc = await pdfjsLib.getDocument(pdfUrl).promise;
-                createPageLinks(pdfDoc.numPages);
                 createChapterLinks();
-                renderChapter(chapters[0].start, chapters[0].end); // Load first chapter by default
+                renderPage(currentPage); // Start rendering from the first page
                 setupScrollListener();
             } catch (error) {
                 console.error('Error loading PDF:', error);
@@ -196,31 +184,6 @@
             }
         }
 
-        async function renderChapter(start, end) {
-            const viewer = document.getElementById('pdf-viewer');
-            viewer.innerHTML = ''; // Clear previous pages
-            for (let i = start; i <= end; i++) {
-                await renderPage(i);
-            }
-            currentChapter = chapters.find(ch => ch.start === start && ch.end === end);
-        }
-
-        function createPageLinks(totalPages) {
-            const pageLinks = document.getElementById('page-links');
-            for (let i = 1; i <= totalPages; i++) {
-                const button = document.createElement('button');
-                button.className = 'chapter-btn';
-                button.textContent = `Page ${i}`;
-                button.onclick = () => {
-                    currentChapter = null;
-                    document.getElementById('pdf-viewer').innerHTML = '';
-                    renderPage(i);
-                    toggleDropdown(); // Close dropdown after selection
-                };
-                pageLinks.appendChild(button);
-            }
-        }
-
         function createChapterLinks() {
             const chapterLinks = document.getElementById('chapter-links');
             chapters.forEach(chapter => {
@@ -228,7 +191,9 @@
                 button.className = 'chapter-btn';
                 button.textContent = chapter.name;
                 button.onclick = () => {
-                    renderChapter(chapter.start, chapter.end);
+                    currentPage = chapter.start; // Start rendering from the chapter's first page
+                    document.getElementById('pdf-viewer').innerHTML = ''; // Clear previous pages
+                    renderPage(currentPage);
                     toggleDropdown(); // Close dropdown after selection
                 };
                 chapterLinks.appendChild(button);
@@ -244,11 +209,9 @@
                 const { scrollTop, scrollHeight, clientHeight } = viewerContainer;
                 const isNearBottom = scrollHeight - (scrollTop + clientHeight) < 50;
 
-                if (isNearBottom && currentChapter) {
-                    const nextChapter = chapters.find(ch => ch.start === currentChapter.end + 1);
-                    if (nextChapter) {
-                        await renderChapter(nextChapter.start, nextChapter.end);
-                    }
+                if (isNearBottom && currentPage < pdfDoc.numPages) {
+                    currentPage++;
+                    await renderPage(currentPage);
                 }
 
                 isScrolling = false;
