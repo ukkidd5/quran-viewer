@@ -5,22 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quran Viewer</title>
     <style>
-        body { 
-            display: flex; 
+        body {
+            display: flex;
             margin: 0;
             font-family: Arial, sans-serif;
             height: 100vh;
             overflow: hidden;
+            background: #f9f9f9;
         }
-        #sidebar { 
-            width: 250px; 
+        #sidebar {
+            width: 250px;
             height: 100vh;
-            overflow-y: auto; 
-            background: #f4f4f4; 
-            padding: 10px;
+            overflow-y: auto;
+            background: #2c3e50;
+            padding: 15px;
             position: fixed;
             left: -250px;
             transition: left 0.3s ease-in-out;
+            color: white;
         }
         #sidebar.show-sidebar {
             left: 0;
@@ -30,37 +32,71 @@
             height: 100vh;
             overflow: auto;
             transition: margin-left 0.3s ease-in-out;
+            background: #fff;
+            padding: 20px;
         }
         canvas {
             width: 100%;
             height: auto;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
         }
-        .menu-toggle { 
-            position: fixed; 
-            top: 10px; 
-            left: 10px; 
-            z-index: 1000; 
-            background: #007BFF; 
-            color: white; 
-            padding: 10px; 
-            border: none; 
-            cursor: pointer; 
+        .menu-toggle {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            background: #007BFF;
+            color: white;
+            padding: 10px;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
         }
-        .menu-toggle:hover { background: #0056b3; }
-        .hidden { display: none; }
-        h2 { font-size: 16px; margin: 15px 0 10px; }
+        .menu-toggle:hover {
+            background: #0056b3;
+        }
+        .hidden {
+            display: none;
+        }
+        h2 {
+            font-size: 18px;
+            margin: 15px 0 10px;
+            color: #ecf0f1;
+        }
         button.sidebar-btn {
             display: block;
             width: 100%;
             margin: 5px 0;
-            padding: 8px;
+            padding: 10px;
             text-align: left;
             border: none;
-            background: #ddd;
+            background: #34495e;
+            color: white;
             cursor: pointer;
+            border-radius: 5px;
+            transition: background 0.3s ease;
         }
-        button.sidebar-btn:hover { background: #bbb; }
-
+        button.sidebar-btn:hover {
+            background: #1abc9c;
+        }
+        .navigation-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        .navigation-buttons button {
+            padding: 10px 20px;
+            background: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background 0.3s ease;
+        }
+        .navigation-buttons button:hover {
+            background: #0056b3;
+        }
         @media (max-width: 768px) {
             #sidebar {
                 width: 80%;
@@ -87,7 +123,11 @@
         <div id="chapter-links"></div>
     </div>
     <div id="viewer-container">
-        <canvas id="viewer"></canvas>
+        <div id="pdf-viewer"></div>
+        <div class="navigation-buttons">
+            <button onclick="prevPage()">Previous</button>
+            <button onclick="nextPage()">Next</button>
+        </div>
     </div>
 
     <script>
@@ -98,64 +138,9 @@
         const pdfUrl = "https://ukkidd5.github.io/quran-viewer/quran.pdf";
         let pdfDoc = null;
         let currentPage = 1;
-        const canvas = document.getElementById('viewer');
-        const ctx = canvas.getContext('2d');
+        let currentChapter = null;
 
-        // Toggle functions
-        function toggleSection(id) {
-            document.getElementById(id).classList.toggle("hidden");
-        }
-
-        function toggleMenu() {
-            document.getElementById("sidebar").classList.toggle("show-sidebar");
-        }
-
-        // PDF handling functions
-        async function loadPDF() {
-            try {
-                pdfDoc = await pdfjsLib.getDocument(pdfUrl).promise;
-                createPageLinks(pdfDoc.numPages);
-                createChapterLinks();
-                renderPage(currentPage);
-            } catch (error) {
-                console.error('Error loading PDF:', error);
-            }
-        }
-
-        async function renderPage(num) {
-            try {
-                const page = await pdfDoc.getPage(num);
-                const viewport = page.getViewport({ scale: 1.5 });
-                
-                // Set canvas dimensions
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
-                
-                // Render PDF page
-                await page.render({
-                    canvasContext: ctx,
-                    viewport: viewport
-                }).promise;
-                
-                currentPage = num;
-            } catch (error) {
-                console.error('Error rendering page:', error);
-            }
-        }
-
-        function createPageLinks(totalPages) {
-            const pageLinks = document.getElementById('page-links');
-            for (let i = 1; i <= totalPages; i++) {
-                const button = document.createElement('button');
-                button.className = 'sidebar-btn';
-                button.textContent = `Page ${i}`;
-                button.onclick = () => renderPage(i);
-                pageLinks.appendChild(button);
-            }
-        }
-
-        function createChapterLinks() {
-            const chapters = [
+        const chapters = [
             { name: "Fatiha", start: 3, end: 3 },
             { name: "1 Juzz", start: 4, end: 21 },
             { name: "2 Juzz", start: 22, end: 39 },
@@ -189,14 +174,103 @@
             { name: "30 Juzz", start: 530, end: 550 }
         ];
 
+        // Toggle functions
+        function toggleSection(id) {
+            document.getElementById(id).classList.toggle("hidden");
+        }
+
+        function toggleMenu() {
+            document.getElementById("sidebar").classList.toggle("show-sidebar");
+        }
+
+        // PDF handling functions
+        async function loadPDF() {
+            try {
+                pdfDoc = await pdfjsLib.getDocument(pdfUrl).promise;
+                createPageLinks(pdfDoc.numPages);
+                createChapterLinks();
+                renderPage(currentPage);
+            } catch (error) {
+                console.error('Error loading PDF:', error);
+            }
+        }
+
+        async function renderPage(num) {
+            try {
+                const page = await pdfDoc.getPage(num);
+                const viewport = page.getViewport({ scale: 1.5 });
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                const renderCtx = { canvasContext: ctx, viewport };
+                await page.render(renderCtx).promise;
+
+                const viewer = document.getElementById('pdf-viewer');
+                viewer.innerHTML = '';
+                viewer.appendChild(canvas);
+
+                currentPage = num;
+            } catch (error) {
+                console.error('Error rendering page:', error);
+            }
+        }
+
+        function createPageLinks(totalPages) {
+            const pageLinks = document.getElementById('page-links');
+            for (let i = 1; i <= totalPages; i++) {
+                const button = document.createElement('button');
+                button.className = 'sidebar-btn';
+                button.textContent = `Page ${i}`;
+                button.onclick = () => {
+                    currentChapter = null;
+                    renderPage(i);
+                };
+                pageLinks.appendChild(button);
+            }
+        }
+
+        function createChapterLinks() {
             const chapterLinks = document.getElementById('chapter-links');
             chapters.forEach(chapter => {
                 const button = document.createElement('button');
                 button.className = 'sidebar-btn';
                 button.textContent = chapter.name;
-                button.onclick = () => renderPage(chapter.start);
+                button.onclick = () => {
+                    currentChapter = chapter;
+                    renderChapter(chapter.start, chapter.end);
+                };
                 chapterLinks.appendChild(button);
             });
+        }
+
+        async function renderChapter(start, end) {
+            const viewer = document.getElementById('pdf-viewer');
+            viewer.innerHTML = '';
+            for (let i = start; i <= end; i++) {
+                await renderPage(i);
+            }
+        }
+
+        function prevPage() {
+            if (currentChapter) {
+                if (currentPage > currentChapter.start) {
+                    renderPage(currentPage - 1);
+                }
+            } else if (currentPage > 1) {
+                renderPage(currentPage - 1);
+            }
+        }
+
+        function nextPage() {
+            if (currentChapter) {
+                if (currentPage < currentChapter.end) {
+                    renderPage(currentPage + 1);
+                }
+            } else if (currentPage < pdfDoc.numPages) {
+                renderPage(currentPage + 1);
+            }
         }
 
         // Initial load
