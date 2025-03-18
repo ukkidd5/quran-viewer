@@ -6,27 +6,49 @@
     <title>Quran Viewer</title>
     <style>
         body {
-            display: flex;
             margin: 0;
             font-family: Arial, sans-serif;
             height: 100vh;
             overflow: hidden;
             background: #f9f9f9;
         }
-        #sidebar {
-            width: 120px; /* Smaller sidebar for Wear OS */
-            height: 100vh;
-            overflow-y: auto;
+        #dropdown {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: #2c3e50;
+            z-index: 1000;
+        }
+        #dropdown button {
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            background: #34495e;
+            color: white;
+            border: none;
+            cursor: pointer;
+            text-align: left;
+        }
+        #dropdown button:hover {
+            background: #1abc9c;
+        }
+        #dropdown-content {
+            display: none;
             background: #2c3e50;
             padding: 10px;
-            color: white;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        #dropdown-content.show {
+            display: block;
         }
         #viewer-container {
-            flex-grow: 1;
             height: 100vh;
             overflow-y: auto;
             background: #fff;
             padding: 10px;
+            margin-top: 50px; /* Space for the dropdown */
         }
         canvas {
             width: 100%;
@@ -34,38 +56,31 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             margin-bottom: 10px;
         }
-        .hidden {
-            display: none;
-        }
-        h2 {
-            font-size: 16px; /* Smaller font size for Wear OS */
-            margin: 10px 0 5px;
-            color: #ecf0f1;
-        }
-        button.sidebar-btn {
+        button.chapter-btn {
             display: block;
             width: 100%;
             margin: 5px 0;
-            padding: 8px;
+            padding: 12px;
             text-align: left;
             border: none;
             background: #34495e;
             color: white;
             cursor: pointer;
             border-radius: 5px;
-            font-size: 14px; /* Larger font for touch-friendly buttons */
+            font-size: 16px; /* Larger font for better readability */
             transition: background 0.3s ease;
         }
-        button.sidebar-btn:hover {
+        button.chapter-btn:hover {
             background: #1abc9c;
         }
         @media (max-width: 400px) {
-            #sidebar {
-                width: 100px; /* Even smaller sidebar for very small screens */
+            #dropdown button {
+                font-size: 16px; /* Smaller font for very small screens */
+                padding: 12px;
             }
-            button.sidebar-btn {
-                padding: 6px;
-                font-size: 12px;
+            button.chapter-btn {
+                padding: 10px;
+                font-size: 14px;
             }
         }
     </style>
@@ -73,15 +88,18 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.worker.min.js"></script>
 </head>
 <body>
-    <div id="sidebar">
-        <button class="sidebar-btn" onclick="toggleSection('page-links')">Pages</button>
-        <div id="page-links" class="hidden">
-            <h2>Pages</h2>
-        </div>
+    <div id="dropdown">
+        <button onclick="toggleDropdown()">☰ Chapters</button>
+        <div id="dropdown-content">
+            <button class="chapter-btn" onclick="toggleSection('page-links')">Pages</button>
+            <div id="page-links" class="hidden">
+                <h2>Pages</h2>
+            </div>
 
-        <button class="sidebar-btn" onclick="toggleSection('chapter-links')">Juzz</button>
-        <div id="chapter-links" class="hidden">
-            <h2>Juzz</h2>
+            <button class="chapter-btn" onclick="toggleSection('chapter-links')">Juzz</button>
+            <div id="chapter-links" class="hidden">
+                <h2>Juzz</h2>
+            </div>
         </div>
     </div>
     <div id="viewer-container">
@@ -133,7 +151,13 @@
             { name: "30 Juzz", start: 530, end: 550 }
         ];
 
-        // Toggle functions
+        // Toggle dropdown menu
+        function toggleDropdown() {
+            const dropdownContent = document.getElementById('dropdown-content');
+            dropdownContent.classList.toggle('show');
+        }
+
+        // Toggle sections (Pages or Juzz)
         function toggleSection(id) {
             document.getElementById(id).classList.toggle("hidden");
         }
@@ -185,12 +209,13 @@
             const pageLinks = document.getElementById('page-links');
             for (let i = 1; i <= totalPages; i++) {
                 const button = document.createElement('button');
-                button.className = 'sidebar-btn';
+                button.className = 'chapter-btn';
                 button.textContent = `Page ${i}`;
                 button.onclick = () => {
                     currentChapter = null;
                     document.getElementById('pdf-viewer').innerHTML = '';
                     renderPage(i);
+                    toggleDropdown(); // Close dropdown after selection
                 };
                 pageLinks.appendChild(button);
             }
@@ -200,10 +225,11 @@
             const chapterLinks = document.getElementById('chapter-links');
             chapters.forEach(chapter => {
                 const button = document.createElement('button');
-                button.className = 'sidebar-btn';
+                button.className = 'chapter-btn';
                 button.textContent = chapter.name;
                 button.onclick = () => {
                     renderChapter(chapter.start, chapter.end);
+                    toggleDropdown(); // Close dropdown after selection
                 };
                 chapterLinks.appendChild(button);
             });
