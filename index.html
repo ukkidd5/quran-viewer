@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quran Viewer</title>
+    <style>
+        body { display: flex; font-family: Arial, sans-serif; }
+        #sidebar { width: 250px; height: 100vh; overflow-y: auto; background: #f4f4f4; padding: 10px; }
+        #viewer { flex-grow: 1; height: 100vh; }
+        h2 { font-size: 16px; margin-top: 10px; }
+        button { display: block; width: 100%; margin: 5px 0; padding: 8px; text-align: left; border: none; background: #ddd; cursor: pointer; }
+        button:hover { background: #bbb; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
+</head>
+<body>
+    <div id="sidebar">
+        <h2>Jump to Page</h2>
+        <div id="page-links"></div>
+
+        <h2>Jump to Juzz</h2>
+        <div id="chapter-links"></div>
+    </div>
+    <canvas id="viewer"></canvas>
+
+    <script>
+        const pdfUrl = "quran.pdf"; // Update this with your hosted PDF file URL
+        let pdfDoc = null;
+        let pageNum = 1;
+        const canvas = document.getElementById('viewer');
+        const ctx = canvas.getContext('2d');
+
+        const chapters = [
+            { name: "Fatiha", start: 3, end: 3 },
+            { name: "1 Juzz", start: 4, end: 21 },
+            { name: "2 Juzz", start: 22, end: 39 },
+            { name: "3 Juzz", start: 40, end: 57 },
+            { name: "4 Juzz", start: 58, end: 75 },
+            { name: "5 Juzz", start: 76, end: 93 },
+            { name: "6 Juzz", start: 94, end: 111 },
+            { name: "7 Juzz", start: 112, end: 129 },
+            { name: "8 Juzz", start: 130, end: 147 },
+            { name: "9 Juzz", start: 148, end: 165 },
+            { name: "10 Juzz", start: 166, end: 183 },
+            { name: "11 Juzz", start: 184, end: 201 },
+            { name: "12 Juzz", start: 202, end: 219 },
+            { name: "13 Juzz", start: 220, end: 237 },
+            { name: "14 Juzz", start: 238, end: 255 },
+            { name: "15 Juzz", start: 256, end: 273 },
+            { name: "16 Juzz", start: 274, end: 291 },
+            { name: "17 Juzz", start: 292, end: 309 },
+            { name: "18 Juzz", start: 310, end: 327 },
+            { name: "19 Juzz", start: 328, end: 345 },
+            { name: "20 Juzz", start: 346, end: 363 },
+            { name: "21 Juzz", start: 364, end: 381 },
+            { name: "22 Juzz", start: 382, end: 399 },
+            { name: "23 Juzz", start: 400, end: 417 },
+            { name: "24 Juzz", start: 418, end: 435 },
+            { name: "25 Juzz", start: 436, end: 453 },
+            { name: "26 Juzz", start: 454, end: 471 },
+            { name: "27 Juzz", start: 472, end: 489 },
+            { name: "28 Juzz", start: 490, end: 509 },
+            { name: "29 Juzz", start: 510, end: 529 },
+            { name: "30 Juzz", start: 530, end: 550 }
+        ];
+
+        async function loadPDF() {
+            pdfDoc = await pdfjsLib.getDocument(pdfUrl).promise;
+            renderPage(pageNum);
+            createPageLinks(pdfDoc.numPages);
+            createChapterLinks();
+        }
+
+        function renderPage(num) {
+            pdfDoc.getPage(num).then(page => {
+                const viewport = page.getViewport({ scale: 1.5 });
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                const renderCtx = { canvasContext: ctx, viewport };
+                page.render(renderCtx);
+            });
+        }
+
+        function createPageLinks(totalPages) {
+            const pageLinks = document.getElementById('page-links');
+            for (let i = 1; i <= totalPages; i++) {
+                let button = document.createElement('button');
+                button.textContent = `Page ${i}`;
+                button.onclick = () => renderPage(i);
+                pageLinks.appendChild(button);
+            }
+        }
+
+        function createChapterLinks() {
+            const chapterLinks = document.getElementById('chapter-links');
+            chapters.forEach(chapter => {
+                let button = document.createElement('button');
+                button.textContent = chapter.name;
+                button.onclick = () => renderPage(chapter.start);
+                chapterLinks.appendChild(button);
+            });
+        }
+
+        loadPDF();
+    </script>
+</body>
+</html>
